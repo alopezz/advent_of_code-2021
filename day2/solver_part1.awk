@@ -1,4 +1,4 @@
-# Run with `awk -f solver.awk input`
+# Run with `awk -f solver_part1.awk input`
 
 /^forward/ {
     horizontal += $2
