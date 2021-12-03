@@ -19,9 +19,11 @@ CREATE TABLE diagnostic_report AS (
 CREATE OR REPLACE FUNCTION most_common_value(integer, table_name text = 'diagnostic_report', OUT result bit) AS
 $$
 BEGIN
-  EXECUTE format('SELECT get_bit(bits, $1) FROM %I
-      GROUP BY get_bit(bits, $1)
-      ORDER BY count(get_bit(bits, $1)) DESC, get_bit(bits, $1) DESC LIMIT 1',
+  EXECUTE format('
+      WITH bits AS (SELECT get_bit(bits, $1) as b FROM %I)
+      SELECT b FROM bits
+        GROUP BY b
+        ORDER BY count(b) DESC, b DESC LIMIT 1',
     table_name)
     INTO result
     USING $1;
@@ -33,9 +35,11 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION least_common_value(integer, table_name text = 'diagnostic_report', OUT result bit) AS
 $$
 BEGIN
-  EXECUTE format('SELECT get_bit(bits, $1) FROM %I
-      GROUP BY get_bit(bits, $1)
-      ORDER BY count(get_bit(bits, $1)), get_bit(bits, $1) LIMIT 1',
+  EXECUTE format('
+      WITH bits AS (SELECT get_bit(bits, $1) as b FROM %I)
+      SELECT b FROM bits
+        GROUP BY b
+        ORDER BY count(b), b LIMIT 1',
     table_name)
     INTO result
     USING $1;

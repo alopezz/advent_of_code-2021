@@ -10,9 +10,8 @@
 ;; The idea of this solution is to use Emacs buffers as a way to manipulate
 ;; the data as much as possible.
 ;; For the first part, this is only used to isolate the columns in the input.
-;; For the second part, the idea was to delete the lines that don't fulfill
-;; the criteria on every iteration. This became the most messy part and one
-;; that may be worth reviewing.
+;; For the second part, the idea is to keep only valid lines in the buffer
+;; as we iterate over every column.
 
 (defun aoc-solve-on-file (filepath solver)
   (with-temp-buffer
@@ -27,6 +26,8 @@
       (forward-char column)
       (push-mark)
       (goto-char (point-max))
+      (while (not (word-at-point))
+        (backward-char))
       (beginning-of-line)
       (forward-char column)
       (let ((rectangle-contents (extract-rectangle (mark) (+ (point) 1))))
@@ -39,7 +40,7 @@ Returns nil if both bits are equally common."
   (let* ((number-of-ones (seq-count (lambda (x) (string= x "1")) lst))
          (number-of-zeros (- (length lst) number-of-ones)))
     (cond
-     ((> number-of-ones number-of-zeros) "1")
+     ((>= number-of-ones number-of-zeros) "1")
      ((< number-of-ones number-of-zeros) "0"))))
 
 (defun least-common-bit-value (lst)
@@ -86,7 +87,14 @@ contents."
 (defun number-of-lines ()
   (count-lines (point-min) (point-max)))
 
+(defun make-regexp-bitmask (idx value)
+  "Returns a Regexp that can filter bitstrings with the given
+value at the given idx"
+  (let ((re (make-string idx ?.)))
+    (concat "^" re value)))
+
 (defun apply-until-one-left (fun buffer)
+  "Apply the criteria column by column."
   (with-temp-buffer
     (insert-buffer-substring buffer)
     (let ((n-columns
@@ -98,39 +106,18 @@ contents."
         (unless (<= (number-of-lines) 1)
           (let ((winning-bit (funcall fun (get-column-contents idx (current-buffer)))))
             (goto-char (point-min))
-            (beginning-of-line)
-            (forward-char idx)
-            (push-mark)
-            (while (< (line-number-at-pos (pop-mark)) (line-number-at-pos (point-max)))
-              (push-mark)
-              (if (equal (char-to-string (char-after)) winning-bit)
-                  (forward-line)
-                (kill-whole-line))
-              (forward-char idx))
-            ;; Clean up last line if necessary
-            (while (and (char-after)
-                        (not (equal (char-to-string (char-after)) winning-bit)))
-              (kill-whole-line) (backward-delete-char 1)
-              (beginning-of-line) (forward-char idx))))))
+            (keep-lines (make-regexp-bitmask idx winning-bit))))))
     (buffer-string)))
 
 (defun get-oxygen-rating (buffer)
   "Get oxygen generator rating from a buffer."
   (rate-to-integer
-   (apply-until-one-left
-    (lambda (x)
-      (let ((b (most-common-bit-value x)))
-        (or b "1")))
-    buffer)))
+   (apply-until-one-left 'most-common-bit-value buffer)))
 
 (defun get-co2-rating (buffer)
   "Get CO2 scrubber rating from a buffer"
   (rate-to-integer
-   (apply-until-one-left
-    (lambda (x)
-      (let ((b (least-common-bit-value x)))
-        (or b "0")))
-    buffer)))
+   (apply-until-one-left 'least-common-bit-value buffer)))
 
 (defun aoc-solve-part2-buffer (buffer)
   "Solve AoC day3 part 2 on buffer."
