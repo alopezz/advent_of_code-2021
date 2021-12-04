@@ -12,7 +12,7 @@
 (defun bingo-mark-number (number &optional buffer marker)
   "Mark a number on a bingo-board.
 Assumes every board postion occupies two characters."
-  (interactive "nInsert number to mark: ") 
+  (interactive "nInsert number to mark: ")
   (let ((buffer (or buffer (current-buffer)))
         (marker (make-bingo-marker marker)))
     (with-current-buffer buffer
@@ -30,11 +30,18 @@ Sets the buffer-local last-bingo-number variable."
         ;; number, and pass it to bingo-mark-number to mark matching numbers.
         (goto-char (point-min))
         (forward-word)
-        (atomic-change-group
-          (let* ((next-input (delete-and-extract-region (point-min) (point)))
-                 (number (string-to-number (string-trim next-input ","))))
-            (bingo-mark-number number buffer marker)
-            (setq-local last-bingo-number number)))))))
+        ;; We check if the forward-word movement has actually caused
+        ;; movement and it hasn't jumped lines to consider the number valid
+        (if (and
+             (not (= (point) (point-min)))
+             (= (line-number-at-pos (point)) (line-number-at-pos (point-min))))
+            (atomic-change-group
+              (let* ((next-input (delete-and-extract-region (point-min) (point)))
+                     (number (string-to-number (string-trim next-input ","))))
+                (bingo-mark-number number buffer marker)
+                (setq-local last-bingo-number number)))
+          ;; Signal that no numbers are left with a special -1 value
+          (setq-local last-bingo-number -1))))))
 
 (defun get-boards (buffer)
   ;; We get the boards by their double-line separation after skipping
@@ -84,11 +91,31 @@ Sets the buffer-local last-bingo-number variable."
 
 (defun aoc-bingo-play-buffer (buffer)
   "Play the whole game until a board wins."
-  (while (not (check-bingo-boards-buffer buffer))
-    (bingo-play-next buffer))
-  (check-bingo-boards-buffer buffer))
+  (with-current-buffer buffer
+    (setq last-bingo-number nil)
+    (while (and
+            (not (check-bingo-boards-buffer buffer))
+            (not (equal last-bingo-number -1)))
+      (bingo-play-next buffer))
+    (check-bingo-boards-buffer buffer)))
 
 (defun aoc-day4-part1-buffer (buffer)
   (let ((winning-board (aoc-bingo-play-buffer buffer)))
     (with-current-buffer buffer
-      (* last-bingo-number (apply '+ (numbers-in-board winning-board))))))
+      (when winning-board
+        (* last-bingo-number (apply '+ (numbers-in-board winning-board)))))))
+
+(defun aoc-day4-part2-buffer (buffer)
+  (with-current-buffer buffer
+    (setq last-bingo-number nil)
+    (while
+        (not (equal last-bingo-number -1))
+      (let ((winning-board (aoc-bingo-play-buffer buffer)))
+        (when winning-board
+          (setq-local last-winning-bingo-number last-bingo-number)
+          (setq-local last-winning-board winning-board)
+          ;; Find and remove winning board from buffer
+          (save-excursion
+            (goto-char (point-min))
+            (replace-string winning-board "")))))
+    (* last-winning-bingo-number (apply '+ (numbers-in-board last-winning-board)))))
