@@ -6,24 +6,21 @@
 ;; Then it's a matter of applying that several times until we get a
 ;; winning board.
 
-(defun make-bingo-marker (&optional marker)
-  (format "%2s" (or marker "X")))
+(defvar bingo-marker " X")
 
-(defun bingo-mark-number (number &optional buffer marker)
+(defun bingo-mark-number (number &optional buffer)
   "Mark a number on a bingo-board.
 Assumes every board postion occupies two characters."
   (interactive "nInsert number to mark: ")
-  (let ((buffer (or buffer (current-buffer)))
-        (marker (make-bingo-marker marker)))
+  (let ((buffer (or buffer (current-buffer))))
     (with-current-buffer buffer
-      (replace-regexp (format "%2d\\b" number) marker))))
+      (replace-regexp (format "%2d\\b" number) bingo-marker))))
 
-(defun bingo-play-next (&optional buffer marker)
+(defun bingo-play-next (&optional buffer)
   "Play the next turn in a game of Bingo.
 Sets the buffer-local last-bingo-number variable."
   (interactive)
-  (let ((buffer (or buffer (current-buffer)))
-        (marker (make-bingo-marker marker)))
+  (let ((buffer (or buffer (current-buffer))))
     (with-current-buffer buffer
       (save-excursion
         ;; Go to the start of the buffer, extract the first word as a
@@ -38,7 +35,7 @@ Sets the buffer-local last-bingo-number variable."
             (atomic-change-group
               (let* ((next-input (delete-and-extract-region (point-min) (point)))
                      (number (string-to-number (string-trim next-input ","))))
-                (bingo-mark-number number buffer marker)
+                (bingo-mark-number number buffer)
                 (setq-local last-bingo-number number)))
           ;; Signal that no numbers are left with a special -1 value
           (setq-local last-bingo-number -1))))))
@@ -49,7 +46,7 @@ Sets the buffer-local last-bingo-number variable."
   (with-current-buffer buffer
     (save-excursion
       (goto-char (point-min))
-      (forward-line 2)
+      (forward-line)
       (split-string (buffer-substring (point) (point-max)) "\n\\{2,\\}"))))
 
 (defun transpose-bingo-board ()
@@ -71,7 +68,7 @@ Sets the buffer-local last-bingo-number variable."
   "Check if a board is winning"
   (with-temp-buffer
     (insert board)
-    (let ((winning-regexp "\\( +X\\)\\{5\\}"))
+    (let ((winning-regexp (format "\\( *%s\\)\\{5\\}" bingo-marker)))
       (goto-char (point-min))
       (or
        (re-search-forward winning-regexp nil t)
@@ -83,7 +80,23 @@ Sets the buffer-local last-bingo-number variable."
 (defun numbers-in-board (board)
   (mapcar
    'string-to-number
-   (split-string (replace-regexp-in-string "[X\\n]" "" board))))
+   (split-string (replace-regexp-in-string "[^ \n[:digit:]]" "" board))))
+
+(defun bingo-board-score-with-last-number (board number)
+  (* number (apply '+ (numbers-in-board board))))
+
+(defun bingo-board-score (board)
+  (bingo-board-score-with-last-number board last-bingo-number))
+
+(defun bingo-last-board-score ()
+  (bingo-board-score-with-last-number last-winning-board last-winning-bingo-number))
+
+(defun bingo-remove-board-from-buffer (board &optional buffer)
+  "Find and remove board from buffer"
+  (with-current-buffer (or buffer (current-buffer))
+    (save-excursion
+      (goto-char (point-min))
+      (replace-string winning-board ""))))
 
 (defun check-bingo-boards-buffer (buffer)
   "Check if any board is winning and return that board."
@@ -92,7 +105,7 @@ Sets the buffer-local last-bingo-number variable."
 (defun aoc-bingo-play-buffer (buffer)
   "Play the whole game until a board wins."
   (with-current-buffer buffer
-    (setq last-bingo-number nil)
+    (setq-local last-bingo-number nil)
     (while (and
             (not (check-bingo-boards-buffer buffer))
             (not (equal last-bingo-number -1)))
@@ -103,19 +116,27 @@ Sets the buffer-local last-bingo-number variable."
   (let ((winning-board (aoc-bingo-play-buffer buffer)))
     (with-current-buffer buffer
       (when winning-board
-        (* last-bingo-number (apply '+ (numbers-in-board winning-board)))))))
+        (bingo-board-score winning-board)))))
 
 (defun aoc-day4-part2-buffer (buffer)
   (with-current-buffer buffer
-    (setq last-bingo-number nil)
+    (setq-local last-bingo-number nil)
     (while
         (not (equal last-bingo-number -1))
       (let ((winning-board (aoc-bingo-play-buffer buffer)))
         (when winning-board
           (setq-local last-winning-bingo-number last-bingo-number)
           (setq-local last-winning-board winning-board)
-          ;; Find and remove winning board from buffer
-          (save-excursion
-            (goto-char (point-min))
-            (replace-string winning-board "")))))
-    (* last-winning-bingo-number (apply '+ (numbers-in-board last-winning-board)))))
+          (bingo-remove-board-from-buffer winning-board))))
+    (bingo-last-board-score)))
+
+(defun aoc-solve-on-file (filepath solver)
+  (with-temp-buffer
+    (insert-file-contents filepath)
+    (funcall solver (current-buffer))))
+
+(defun aoc-day4-part1 (filepath)
+  (aoc-solve-on-file filepath 'aoc-day4-part1-buffer))
+
+(defun aoc-day4-part2 (filepath)
+  (aoc-solve-on-file filepath 'aoc-day4-part2-buffer))
