@@ -6,5 +6,5 @@ executable, avoiding having to parse. Note that it's remarkably slow.
 Run with:
 
 ```bash
-elixir -r solver.ex input.exs
+elixir -r solver.ex input_exs
 ```
