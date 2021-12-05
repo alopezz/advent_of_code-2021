@@ -38,4 +38,15 @@ WITH counts AS (
   FROM _grid CROSS JOIN hydrothermal_vent_hv_lines lines
   WHERE (_grid.point ## lines.line) ~= _grid.point
   GROUP BY _grid.point[0], _grid.point[1]
-) SELECT count(count) FROM counts WHERE count > 1;
+) SELECT count(count) AS part1_solution FROM counts WHERE count > 1;
+
+
+-- Check, for each combination of point in the grid vs line, if the
+-- point lies in the line; then count those points that lie in more
+-- than two lines.
+WITH counts AS (
+  SELECT count(point) as count
+  FROM _grid CROSS JOIN hydrothermal_vent_lines lines
+  WHERE (_grid.point ## lines.line) ~= _grid.point
+  GROUP BY _grid.point[0], _grid.point[1]
+) SELECT count(count) AS part2_solution FROM counts WHERE count > 1;
