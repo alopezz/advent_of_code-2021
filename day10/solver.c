@@ -4,7 +4,7 @@
 
 
 typedef struct {
-  void** contents;
+  char* contents;
   int capacity;
   int index;
   int item_size;
@@ -14,7 +14,7 @@ Stack new_stack(int capacity, unsigned int size) {
   Stack new_stack;
   new_stack.item_size = size;
 
-  new_stack.contents = calloc(capacity, sizeof(void*));
+  new_stack.contents = calloc(capacity, size);
   if (new_stack.contents == NULL) {
     new_stack.index = -1;
     new_stack.capacity = -1;
@@ -27,45 +27,39 @@ Stack new_stack(int capacity, unsigned int size) {
 }
 
 void destroy_stack(Stack stack) {
-  for (int idx=0; idx < stack.index; idx++) {
-    free(stack.contents[idx]);
-  }
   free(stack.contents);
 }
 
-void* stack_pop(Stack* stack) {
+char* stack_pop(Stack* stack) {
   if (stack->index <= 0 || stack->index >= stack->capacity) {
     return 0;
   }
   stack->index--;
-  return stack->contents[stack->index];
+  return stack->contents + stack->index * stack -> item_size;
 }
 
-void* stack_peek(Stack stack) {
+char* stack_peek(Stack stack) {
   if (stack.index <= 0 || stack.index >= stack.capacity) {
     return 0;
   }
-  return stack.contents[stack.index - 1];
+  return stack.contents + (stack.index - 1) * stack.item_size;
 }
 
-int stack_push(Stack* stack, void* elt) {
+int stack_push(Stack* stack, char* elt) {
   // Resize capacity when index is about to go over it. For simplicity,
   // the idea is to resize it in an amount equal to the initial capacity.
   if (stack->index >= stack->capacity) {
     int new_size = (stack->capacity + stack->index);
-    stack->contents = realloc(stack->contents, new_size * sizeof(void*));
+    stack->contents = realloc(stack->contents, new_size * stack->item_size);
     if (stack->contents == NULL) {
       return 0;
     }
     stack->capacity = new_size;
   }
 
-  void* new_ptr = calloc(1, stack->item_size);
-
-  if (new_ptr == NULL) return 0;
-
-  memcpy(new_ptr, elt, stack->item_size);
-  stack->contents[stack->index] = new_ptr;
+  memcpy(stack->contents + stack->index * stack->item_size,
+         elt,
+         stack->item_size);
   stack->index++;
 
   return 1;
@@ -114,7 +108,7 @@ unsigned long score_completion(Stack* stack) {
   unsigned long score = 0;
   while (stack_peek(*stack) != 0) {
     score *= 5;
-    score += score_for_completing(*(char*) stack_pop(stack));
+    score += score_for_completing(*stack_pop(stack));
   }
   return score;
 }
@@ -140,7 +134,7 @@ Score score_line(char* line) {
     /* Character matching logic */
     if (is_opening_char(c)) {
       stack_push(&stack, &c);
-    } else if (is_closing_pair(*(char*) stack_peek(stack), c)) {
+    } else if (is_closing_pair(*stack_peek(stack), c)) {
       stack_pop(&stack);
     } else {
       score.part1 += score_illegal(c);
@@ -153,17 +147,17 @@ Score score_line(char* line) {
 }
 
 int compare(const void* a, const void* b) {
-  unsigned long arg1 = **(const unsigned long**)a;
-  unsigned long arg2 = **(const unsigned long**)b;
+  unsigned long arg1 = *(const unsigned long*)a;
+  unsigned long arg2 = *(const unsigned long*)b;
  
   if (arg1 < arg2) return -1;
   if (arg1 > arg2) return 1;
   return 0;
 }
 
-unsigned long winner_score(Stack* scores) {
-  qsort(scores->contents, scores->index, scores->item_size, compare);
-  return *(unsigned long*) scores->contents[scores->index/2];
+unsigned long winner_score(Stack scores) {
+  qsort(scores.contents, scores.index, scores.item_size, compare);
+  return *(unsigned long*) (scores.contents + scores.item_size * (scores.index - 1)/2);
 }
 
 int main() {
@@ -175,11 +169,11 @@ int main() {
     Score new_score = score_line(buffer);
     score1 += new_score.part1;
     if (new_score.part2 > 0) {
-      stack_push(&score2_list, &new_score.part2);
+      stack_push(&score2_list, (char*) &new_score.part2);
     }
   }
   printf("Score (part 1) is %d!\n", score1);
-  printf("Score (part 2) is %lu!\n", winner_score(&score2_list));
+  printf("Score (part 2) is %lu!\n", winner_score(score2_list));
 
   destroy_stack(score2_list);
 
