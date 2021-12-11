@@ -1,0 +1,25 @@
+<form phx-change="update-input">
+  <textarea name="puzzle-input"
+            placeholder="Enter starting energy level map..."
+            cols="10"
+            rows="10"
+            style="width:auto; height:auto"><%= @input_data %></textarea>
+</form>
+
+<div class="octopi">
+  <%= for row <- @octopi do %>
+    <div>
+      <%= for octopus <- row do %>
+        <span { octopi_params(octopus) }>🐙</span>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<form phx-change="update-step">
+  <label for="step">Step:</label>
+  <input type="number" name="step" min="0" max="500" step="1" value={ @step } style="width:5em">
+  <input type="range" name="step" min="0" max="500" step="1" value={ @step }>
+</form>
+
+<span>Flash count: <%= @flashes %></span>
