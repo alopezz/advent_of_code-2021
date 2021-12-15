@@ -44,34 +44,45 @@ defmodule Day15.Exploration do
   Take an exploration step.
   """
   def explore(%__MODULE__{exploration: exploration, visited: visited} = state, map) do
-    # Next point to visit is the unvisited point with the least accumulated risk
-    {next_point, _} = Enum.min_by(exploration, fn {_, risk} -> risk end)
+    current = choose_next_point(exploration)
 
     # Calculate risk to reach neighbors going through the point we're visiting
     neighbor_risks =
-      ChitonMap.neighbors(map, next_point)
+      ChitonMap.neighbors(map, current)
       |> Enum.reject(fn pos -> MapSet.member?(visited, pos) end)
       |> Enum.map(fn pos ->
-        {pos, exploration[next_point] + ChitonMap.risk_at(map, pos)}
+        {pos, exploration[current] + ChitonMap.risk_at(map, pos)}
       end)
 
-    # Mark point as visited
-    exploration = Map.delete(exploration, next_point)
-    visited = MapSet.put(visited, next_point)
-
-    # Update exploration map with new best risks for neighbors
-    exploration =
-      Enum.reduce(neighbor_risks, exploration, fn {point, risk}, exp ->
-        Map.update(exp, point, risk, fn old_risk ->
-          if risk < old_risk, do: risk, else: old_risk
-        end)
-      end)
-
-    %{state | exploration: exploration, visited: visited}
+    mark_as_visited(state, current)
+    |> update_exploration(neighbor_risks)
   end
 
   def explore(%ChitonMap{} = map) do
     explore(%__MODULE__{}, map)
+  end
+
+  defp choose_next_point(exploration) do
+    # Next point to visit is the unvisited point with the least accumulated risk
+    {next_point, _} = Enum.min_by(exploration, fn {_, risk} -> risk end)
+    next_point
+  end
+
+  defp mark_as_visited(%{exploration: exploration, visited: visited} = state, point) do
+    %{state | exploration: Map.delete(exploration, point), visited: MapSet.put(visited, point)}
+  end
+
+  defp update_exploration(%{exploration: exploration} = state, new_risks) do
+    %{
+      state
+      | exploration:
+          Enum.reduce(new_risks, exploration, fn {point, risk}, exp ->
+            Map.update(exp, point, risk, fn
+              old_risk when risk >= old_risk -> old_risk
+              _ -> risk
+            end)
+          end)
+    }
   end
 
   @doc """
