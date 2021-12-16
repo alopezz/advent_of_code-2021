@@ -1,4 +1,4 @@
-module Day13
+module Day14
   class Polymer
     def initialize(chain)
       @chain_end = chain[-1]
@@ -66,8 +66,8 @@ end
 
 require 'minitest/autorun'
 
-class TestDay13 < Minitest::Test
-  include Day13
+class TestDay14 < Minitest::Test
+  include Day14
 
   def setup
     @example = <<~EXAMPLE
