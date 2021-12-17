@@ -1,7 +1,7 @@
 
 // An iterator that yields the initial velocities for which the target area is hit.
 function* searchIterator(target, startingYVel = 15000) {
-  for (let yVel = startingYVel; yVel >= target.minY; yVel--) {
+  for (let yVel = -target.minY; yVel >= target.minY; yVel--) {
     // Get integer step values for which we'd fall within the target area's y range
     const minStep = Math.ceil(stepForHeight(yVel, target.maxY));
     const maxStep = Math.floor(stepForHeight(yVel, target.minY));
@@ -23,8 +23,8 @@ function* searchIterator(target, startingYVel = 15000) {
 }
 
 // Solves part 1
-function searchHighest(target, startingYVel = 15000) {
-  for (let {y: yVel} of searchIterator(target, startingYVel)) {
+function searchHighest(target) {
+  for (let {y: yVel} of searchIterator(target)) {
     return maxDistance(yVel);
   }
   // Just in case we don't find any
@@ -32,9 +32,9 @@ function searchHighest(target, startingYVel = 15000) {
 }
 
 // Solves part 2
-function searchAll(target, startingYVel = 15000) {
+function searchAll(target) {
   let validStarts = 0;
-  for (let {y: yVel} of searchIterator(target, startingYVel)) {
+  for (let {y: yVel} of searchIterator(target)) {
     validStarts++;
   }
   return validStarts;
