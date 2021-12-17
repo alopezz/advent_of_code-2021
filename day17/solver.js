@@ -52,8 +52,7 @@ function calculatePosition(initialVelocity, steps) {
 // Calculates the max distance reached based on a given initial velocity,
 // assuming an acceleration of -1. Valid for both X and Y in this problem.
 function maxDistance(initial) {
-  const maxStep = initial + 1;
-  return maxStep * initial - seriesSum(maxStep - 1);
+  return (initial**2 + initial) / 2;
 }
 
 // Calculates the sum of 1..x
