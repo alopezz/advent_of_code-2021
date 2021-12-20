@@ -1,1 +1,3 @@
-*.sql linguist-detectable=true
+*.sql linguist-detectable
+day11/dumbo_octopus/assets/** linguist-vendored
+day11/dumbo_octopus/priv/** linguist-vendored
