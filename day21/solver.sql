@@ -63,8 +63,8 @@ SELECT outcome, count(*) as times FROM summed_outcomes GROUP BY outcome);
 CREATE OR REPLACE VIEW game AS (
   WITH RECURSIVE record(player, turn, pos, score, count) AS (
     VALUES
-      (1, 0, :player1_start, 0, 1::bigint),
-      (2, 1, :player2_start, 0, 1::bigint)
+      (1, 0, :player1_start, 0, 1::numeric),
+      (2, 1, :player2_start, 0, 1::numeric)
   UNION ALL
     (WITH partial AS (
       SELECT
@@ -82,7 +82,7 @@ CREATE OR REPLACE VIEW game AS (
         WHERE score < :winning_score) as _
       )
       -- Group partial results
-      SELECT player, turn, pos, score, sum(count)::bigint as count
+      SELECT player, turn, pos, score, sum(count)::numeric as count
       FROM partial GROUP BY (player, turn, pos, score))
   ) SELECT * FROM record);
 
